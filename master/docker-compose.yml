@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+  redis:
+    image: "redis:alpine"
+
+  server:
+    depends_on:
+      - redis
+    build: .
+    container_name: edns-master
+    environment:
+      EAR7H_ENV: "prod"
+      EAR7H_ROOT: "104.131.130.194"
+    ports:
+      - "53:4453"
+      - "4454:4454"
