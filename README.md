@@ -14,3 +14,7 @@ this package is a successor to the e7 protocol. Rather than using a distributed 
  * reverse proxies request to the service based on the requested host
     * gets tls certs for services
  * renew edns records for services
+
+
+__todo__
+* logging

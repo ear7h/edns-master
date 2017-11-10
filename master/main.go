@@ -14,10 +14,10 @@ import (
 
 // underscore means global
 const (
-	_dnsPort       = ":4453"
+	_dnsPort         = ":4453"
 	_masterAdminPort = ":4454"
-	_slavePort     = ":4443" // the slave proxy server
-	_timeout       = 120     // timeout in seconds
+	_slavePort       = ":4443" // the slave proxy server
+	_timeout         = 120     // timeout in seconds
 )
 
 var _password string
@@ -69,7 +69,10 @@ func in(x string, arr *[]string) (b bool) {
 // alphanumeric plus dash
 func validHostName(name string) bool {
 	for _, v := range name {
-		if (v < 'a' || v > 'z') && (v < 'A' || v > 'Z') && (v < '0' || v > '9') && (v != '-') {
+		if (v < 'a' || v > 'z') &&
+			(v < 'A' || v > 'Z') &&
+			(v < '0' || v > '9') &&
+			(v != '-') && (v != '.') {
 			return false
 		}
 	}
@@ -108,7 +111,6 @@ func addBlock(b Block) (ret []string) {
 		return
 	}
 
-
 	// get A records
 	arr, err := _store.SMembers("_hosts").Result()
 	if err != nil {
@@ -117,15 +119,19 @@ func addBlock(b Block) (ret []string) {
 
 	// add A record for the node
 	_store.Set(b.Hostname+"."+_domainDot, b.ip, _timeout*time.Second)
-	ret = []string{b.Hostname+"."+_domainDot}
+	ret = []string{b.Hostname + "." + _domainDot}
 
 	// add CNAME records, making sure they don't overwrite
 	// the A records
 	for _, v := range b.Services {
 		if in(v, &arr) || !validHostName(v) {
+			fmt.Println(v, " invalid")
 			continue
 		}
-		_store.Set(v+"."+_domainDot, b.Hostname+_domainDot, _timeout*time.Second)
+		err = _store.Set(v+"."+_domainDot, b.Hostname+_domainDot, _timeout*time.Second).Err()
+		if err != nil {
+			fmt.Println(err)
+		}
 		ret = append(ret, v+"."+_domainDot)
 	}
 	return
@@ -253,5 +259,5 @@ func main() {
 		}
 	}()
 
-	panic(<- hang)
+	panic(<-hang)
 }

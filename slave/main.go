@@ -138,6 +138,8 @@ func post() {
 
 	signBlock(&b)
 
+	fmt.Println("posting: ", b)
+
 	byt, err := json.Marshal(b)
 	if err != nil {
 		fmt.Println(err)
