@@ -99,7 +99,7 @@ func verifyBlock(b Block) (ok bool) {
 
 // adds a request Block to the redis store
 func addBlock(b Block) (ret []string) {
-	if bok := verifyBlock(b); !bok {
+	if ok := verifyBlock(b); !ok {
 		return
 	}
 
@@ -128,6 +128,9 @@ func addBlock(b Block) (ret []string) {
 			fmt.Println(v, " invalid")
 			continue
 		}
+
+		fmt.Println("adding service: ", v+"."+_domainDot)
+
 		err = _store.Set(v+"."+_domainDot, b.Hostname+_domainDot, _timeout*time.Second).Err()
 		if err != nil {
 			fmt.Println(err)

@@ -145,10 +145,11 @@ func post() {
 		fmt.Println(err)
 	}
 
-	_, err = http.Post("http://"+_masterHost + _masterAdminPort, "text/json", bytes.NewReader(byt))
+	res, err = http.Post("http://"+_masterHost + _masterAdminPort, "text/json", bytes.NewReader(byt))
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println("res")
 }
 
 func main() {
