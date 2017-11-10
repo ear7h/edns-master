@@ -100,6 +100,7 @@ func addBlock(b Block) (ret []string) {
 		return
 	}
 
+	fmt.Println("adding: ", b)
 
 	// keep track of a records
 	err := _store.SAdd("_hosts", b.Hostname+"."+_domainDot).Err()
@@ -204,6 +205,10 @@ func clean() {
 	}
 
 	for _, v := range arr {
+		if v == _domainDot {
+			continue
+		}
+
 		ip, err := _store.Get(v).Result()
 		if err != nil {
 			continue
