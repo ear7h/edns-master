@@ -3,7 +3,7 @@ version: "3"
 services:
   redis:
     image: "redis:latest"
-  container_name: edns-redis
+    container_name: edns-redis
 
 
   server:
