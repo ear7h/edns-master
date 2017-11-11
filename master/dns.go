@@ -7,7 +7,10 @@ import (
 )
 
 func serial() uint32 {
-	return uint32(time.Now().Sub(_start) / (_timeout * time.Second))
+	t := time.Now()
+
+	yyyymmdd := (t.Year() * 10000) + (int(t.Month()) * 100) + (t.Day())
+	return uint32(yyyymmdd * 100) + uint32(_changes)
 }
 
 func serveDNS() error {
@@ -27,6 +30,9 @@ func serveDNS() error {
 	return <-ret
 }
 
+// ear7h.net.	120	IN	SOA	ns1.ear7h.net. julio\.grillo98.gmail.com 2017271001 120 30 360 60
+// google.com.		59	IN	SOA	ns1.google.com. dns-admin.google.com. 175207927 900 900 1800 60
+
 func soa() []dns.RR {
 	return []dns.RR{
 		&dns.SOA{
@@ -37,11 +43,11 @@ func soa() []dns.RR {
 				Ttl:    uint32(_timeout),
 			},
 			Ns:      "ns1." + _domainDot,
-			Mbox:    "julio.grillo98.gmail.com",
+			Mbox:    "julio\\.grillo98.gmail.com.",
 			Serial:  serial(),
 			Refresh: uint32(_timeout),
 			Retry:   uint32(_timeout / 4),
-			Expire:  uint32(_timeout * 2),
+			Expire:  uint32(_timeout * 6),
 			Minttl:  uint32(_timeout / 2),
 		},
 	}
@@ -71,10 +77,6 @@ func ns() []dns.RR {
 
 func makeDNSHandler() dns.HandlerFunc {
 	return func(w dns.ResponseWriter, r *dns.Msg) {
-		start := time.Now()
-		fmt.Println("got dns message for:", r.Question[0].Name)
-		fmt.Println("message from: ", w.RemoteAddr())
-
 		msg := new(dns.Msg)
 
 		msg.SetReply(r)
@@ -88,21 +90,20 @@ func makeDNSHandler() dns.HandlerFunc {
 			msg.Answer = ns()
 		case dns.TypeSOA:
 			msg.Answer = soa()
-		case dns.TypeCNAME:
-			fallthrough
-		case dns.TypeA:
-			fallthrough
-		case dns.TypeAAAA:
+		case dns.TypeA, dns.TypeCNAME, dns.TypeAAAA:
 			rr := query(q.Name)
-			if len(rr) != 0 {
+			if len(rr) > 0 {
 				msg.Answer = rr
 			} else {
 				msg.Answer = soa()
 			}
+		default:
+			msg.Answer = soa()
 		}
 
-		w.WriteMsg(msg)
-		fmt.Println("end: ", time.Now().Sub(start))
-		fmt.Println("responding: ", msg.String())
+		err := w.WriteMsg(msg)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }

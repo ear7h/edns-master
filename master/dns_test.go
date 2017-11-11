@@ -37,7 +37,14 @@ func TestDNS(t *testing.T) {
 		panic(err)
 	}
 
+	fmt.Println("CASE 1 PASS\n", r)
+
+	m.SetQuestion(".ear7h.net.", dns.TypeSOA)
+
+	r, err = dns.Exchange(m, "127.0.0.1"+_dnsPort)
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println(r)
-
-
 }

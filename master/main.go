@@ -23,7 +23,7 @@ const (
 var _password string
 var _domain = "ear7h.net"
 var _domainDot = "ear7h.net."
-var _start = time.Now()
+var _changes int
 var _masterIP string
 var _store *redis.Client
 
@@ -99,7 +99,9 @@ func verifyBlock(b Block) (ok bool) {
 
 // adds a request Block to the redis store
 func addBlock(b Block) (ret []string) {
+	_changes++
 	if ok := verifyBlock(b); !ok {
+		fmt.Println("verification failed")
 		return
 	}
 
@@ -131,7 +133,7 @@ func addBlock(b Block) (ret []string) {
 
 		fmt.Println("adding service: ", v+"."+_domainDot)
 
-		err = _store.Set(v+"."+_domainDot, b.Hostname+_domainDot, _timeout*time.Second).Err()
+		err = _store.Set(v+"."+_domainDot, b.Hostname+"."+_domainDot, _timeout*time.Second).Err()
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -181,12 +183,14 @@ aRecord:
 
 	target, err := _store.Get(name).Result()
 	if err != nil || !in(target, &arr) {
+		fmt.Println("[name, target, err]", name, target, err)
 		_store.Del(name)
 		return
 	}
 
 	ttl, err := _store.TTL(name).Result()
 	if err != nil {
+		fmt.Println("[name, err]", name, err)
 		return
 	}
 
@@ -206,6 +210,7 @@ aRecord:
 }
 
 func clean() {
+	_changes++
 	_store.SAdd("_hosts", _domainDot)
 	arr, err := _store.SMembers("_hosts").Result()
 	// should not be redis.Nil
