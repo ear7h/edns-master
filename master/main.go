@@ -107,8 +107,11 @@ func addBlock(b Block) (ret []string) {
 
 	fmt.Println("adding: ", b)
 
+	hostname := strings.ToLower(b.Hostname)
+
+
 	// keep track of a records
-	err := _store.SAdd("_hosts", b.Hostname+"."+_domainDot).Err()
+	err := _store.SAdd("_hosts", hostname+"."+_domainDot).Err()
 	if err != nil {
 		return
 	}
@@ -120,8 +123,8 @@ func addBlock(b Block) (ret []string) {
 	}
 
 	// add A record for the node
-	_store.Set(b.Hostname+"."+_domainDot, b.ip, _timeout*time.Second)
-	ret = []string{b.Hostname + "." + _domainDot}
+	_store.Set(hostname+"."+_domainDot, b.ip, _timeout*time.Second)
+	ret = []string{hostname + "." + _domainDot}
 
 	// add CNAME records, making sure they don't overwrite
 	// the A records
@@ -131,9 +134,11 @@ func addBlock(b Block) (ret []string) {
 			continue
 		}
 
+		v = strings.ToLower(v)
+
 		fmt.Println("adding service: ", v+"."+_domainDot)
 
-		err = _store.Set(v+"."+_domainDot, b.Hostname+"."+_domainDot, _timeout*time.Second).Err()
+		err = _store.Set(v+"."+_domainDot, hostname+"."+_domainDot, _timeout*time.Second).Err()
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -144,6 +149,8 @@ func addBlock(b Block) (ret []string) {
 }
 
 func query(name string) (rr []dns.RR) {
+	name = strings.ToLower(name)
+
 	// get A records
 	arr, err := _store.SMembers("_hosts").Result()
 	if err != nil {
