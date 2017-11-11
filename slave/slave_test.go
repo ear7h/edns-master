@@ -6,6 +6,9 @@ import (
 	"fmt"
 )
 
+func init() {
+}
+
 func TestPost(t *testing.T) {
 	_localServices["test-service"] = "127.0.0.1:8080"
 

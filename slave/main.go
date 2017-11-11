@@ -1,26 +1,26 @@
 package main
 
 import (
-	"time"
-	"strings"
-	"encoding/base64"
+	"bytes"
 	"crypto/sha512"
-	"os"
-	"sync"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/ear7h/edns/client"
+	"io/ioutil"
 	"net"
 	"net/http"
-	"encoding/json"
-	"bytes"
-	"io/ioutil"
+	"os"
+	"strings"
+	"sync"
+	"time"
 )
 
-const(
+const (
 	_masterAdminPort = ":4454"
-	_slaveAdminPort = ":4455"
-	_proxyPort = ":4443"
-	_timeout       = 120     // timeout in seconds
+	_slaveAdminPort  = ":4455"
+	_proxyPort       = ":4443"
+	_timeout         = 120 // timeout in seconds
 )
 
 var _hostname string
@@ -44,11 +44,11 @@ func init() {
 }
 
 type Block struct {
-	Hostname string `json:"hostname"`
-	Signature string `json:"signature"`
+	Hostname  string    `json:"hostname"`
+	Signature string    `json:"signature"`
 	Timestamp time.Time `json:"timestamp"`
-	Services []string `json:"services"`
-	ip string // filled in by admin server
+	Services  []string  `json:"services"`
+	ip        string    // filled in by admin server
 }
 
 func signBlock(b *Block) {
@@ -89,7 +89,7 @@ func register(r client.Request) (resBody []byte, err error) {
 		return
 	}
 
-	res, err := http.Post(_masterHost + _masterAdminPort, "text/json", bytes.NewReader(byt))
+	res, err := http.Post("http://"+_masterHost+_masterAdminPort, "text/json", bytes.NewReader(byt))
 	if err != nil {
 		return
 	}
@@ -145,11 +145,10 @@ func post() {
 		fmt.Println(err)
 	}
 
-	res, err = http.Post("http://"+_masterHost + _masterAdminPort, "text/json", bytes.NewReader(byt))
+	_, err = http.Post("http://"+_masterHost+_masterAdminPort, "text/json", bytes.NewReader(byt))
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("res")
 }
 
 func main() {
