@@ -84,6 +84,7 @@ func makeDNSHandler() dns.HandlerFunc {
 		msg.Ns = ns()
 
 		q := r.Question[0]
+		fmt.Println(q.String())
 
 		switch q.Qtype {
 		case dns.TypeNS:

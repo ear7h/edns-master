@@ -190,7 +190,7 @@ aRecord:
 
 	target, err := _store.Get(name).Result()
 	if err != nil || !in(target, &arr) {
-		fmt.Println("[name, target, err]", name, target, err)
+		fmt.Println("redis miss: [name, target, err]", name, target, err)
 		_store.Del(name)
 		return
 	}
@@ -245,6 +245,8 @@ func clean() {
 		c.Close()
 	}
 
+	err = _store.Set("ns1."+_domainDot, _masterIP, _timeout*time.Second).Err()
+	err = _store.Set("ns2."+_domainDot, _masterIP, _timeout*time.Second).Err()
 	err = _store.Set(_domainDot, _masterIP, _timeout*time.Second).Err()
 	if err != nil {
 		panic(err)
