@@ -123,12 +123,6 @@ func addBlock(b Block) (ret []string) {
 		return
 	}
 
-	// get A records
-	arr, err := _store.SMembers("_hosts").Result()
-	if err != nil {
-		return
-	}
-
 	// add A record for the node
 	err = _store.Set(hostname+"."+_domainDot, b.ip, _timeout*time.Second).Err()
 	if err != nil {
@@ -136,6 +130,12 @@ func addBlock(b Block) (ret []string) {
 		return
 	}
 	ret = []string{hostname + "." + _domainDot}
+
+	// get all A records
+	arr, err := _store.SMembers("_hosts").Result()
+	if err != nil {
+		return
+	}
 
 	// add CNAME records, making sure they don't overwrite
 	// the A records
