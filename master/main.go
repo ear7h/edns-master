@@ -26,8 +26,11 @@ var _domainDot = "ear7h.net."
 var _changes int
 var _masterIP string
 var _store *redis.Client
+var _hostWhitelist map[string]bool
 
 func init() {
+	_password = "asd"
+
 	_masterIP = os.Getenv("EAR7H_ROOT")
 
 	var redisAddr = "localhost:6379"
@@ -46,7 +49,12 @@ func init() {
 		fmt.Println(pong, err)
 	}
 
-	_password = "asd"
+	_hostWhitelist = map[string]bool{
+		_domainDot: true,
+		"ns1."+_domainDot : true,
+		"ns2."+_domainDot : true,
+	}
+
 }
 
 type Block struct {
@@ -122,7 +130,10 @@ func addBlock(b Block) (ret []string) {
 	}
 
 	// add A record for the node
-	_store.Set(hostname+"."+_domainDot, b.ip, _timeout*time.Second)
+	err = _store.Set(hostname+"."+_domainDot, b.ip, _timeout*time.Second).Err()
+	if err != nil {
+		fmt.Println(err)
+	}
 	ret = []string{hostname + "." + _domainDot}
 
 	// add CNAME records, making sure they don't overwrite
@@ -217,9 +228,14 @@ aRecord:
 
 func clean() {
 	_changes++
-	_store.SAdd("_hosts", _domainDot)
-	_store.SAdd("_hosts", "ns1."+_domainDot, _masterIP)
-	_store.SAdd("_hosts", "ns2."+_domainDot, _masterIP)
+
+	for k := range _hostWhitelist {
+		err := _store.SAdd("_hosts", k).Err()
+		err = _store.Set(k, _masterIP, _timeout*time.Second).Err()
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	arr, err := _store.SMembers("_hosts").Result()
 	// should not be redis.Nil
@@ -228,7 +244,7 @@ func clean() {
 	}
 
 	for _, v := range arr {
-		if v == _domainDot {
+		if _hostWhitelist[v] {
 			continue
 		}
 
@@ -237,7 +253,7 @@ func clean() {
 			continue
 		}
 
-		c, err := net.Dial("tcp", ip+_slavePort)
+		c, err := net.DialTimeout("tcp", ip+_slavePort, 5 * time.Second)
 		if err != nil {
 			fmt.Println("cleaning: ", v)
 			_store.SRem(v)
@@ -245,13 +261,6 @@ func clean() {
 			continue
 		}
 		c.Close()
-	}
-
-	err = _store.Set("ns1."+_domainDot, _masterIP, _timeout*time.Second).Err()
-	err = _store.Set("ns2."+_domainDot, _masterIP, _timeout*time.Second).Err()
-	err = _store.Set(_domainDot, _masterIP, _timeout*time.Second).Err()
-	if err != nil {
-		panic(err)
 	}
 }
 

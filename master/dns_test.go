@@ -10,7 +10,8 @@ import (
 )
 
 func TestDNS(t *testing.T) {
-	go main()
+	//go main()
+	host := "ear7h.net"
 
 	b := Block{
 		Hostname: "testhost",
@@ -24,7 +25,7 @@ func TestDNS(t *testing.T) {
 		panic(err)
 	}
 
-	_, err = http.Post("http://"+_masterIP+_masterAdminPort, "text/json", bytes.NewReader(byt))
+	_, err = http.Post("http://"+host+_masterAdminPort, "text/json", bytes.NewReader(byt))
 	if err != nil {
 		panic(err)
 	}
@@ -32,16 +33,16 @@ func TestDNS(t *testing.T) {
 	m := new(dns.Msg)
 	m.SetQuestion("testhost"+".ear7h.net.", dns.TypeA)
 
-	r, err := dns.Exchange(m, "127.0.0.1"+_dnsPort)
+	r, err := dns.Exchange(m, host+":53")
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("CASE 1 PASS\n", r)
+	fmt.Println(r)
 
-	m.SetQuestion(".ear7h.net.", dns.TypeSOA)
+	m.SetQuestion("test-service.ear7h.net.", dns.TypeCNAME)
 
-	r, err = dns.Exchange(m, "127.0.0.1"+_dnsPort)
+	r, err = dns.Exchange(m, host+":53")
 	if err != nil {
 		panic(err)
 	}

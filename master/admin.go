@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"fmt"
 )
 
 func removePort(addr string) string {
