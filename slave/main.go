@@ -28,7 +28,7 @@ var _masterHost string
 var _password string
 var _portMin = 8080
 var _portMax = 8090 // exclusive
-// subdomain : portString
+// subdomain : ip
 var _localServices = map[string]string{}
 var regLock sync.Mutex
 
@@ -161,5 +161,16 @@ func main() {
 		}
 	}()
 
-	panic(serveAdmin())
+
+	go func() {
+		panic(serveAdmin())
+	}()
+
+	go func() {
+	panic(serveProxy())
+	}()
+
+	<- make(chan bool, 1)
+
+
 }
