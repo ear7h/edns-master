@@ -17,4 +17,5 @@ this package is a successor to the e7 protocol. Rather than using a distributed 
 
 
 __todo__
+* not hardcoded authentication
 * logging

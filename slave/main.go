@@ -29,6 +29,7 @@ var _portMin = 8080
 var _portMax = 8090 // exclusive
 // subdomain : ip
 var _localServices = map[string]string{}
+var _availablePorts = map[int]bool{}
 var regLock sync.Mutex
 
 func init() {
@@ -43,6 +44,10 @@ func init() {
 	_password = "asd"
 
 	_localServices[_hostname+"."+_masterHost] = "127.0.0.1"+_slaveAdminPort
+
+	for i := _portMin; i < _portMax; i ++ {
+		_availablePorts[i] = true
+	}
 }
 
 type Block struct {
@@ -66,29 +71,32 @@ func signBlock(b *Block) {
 	b.Signature = base64.StdEncoding.EncodeToString(sum[:])
 }
 
-
-// copied from the client package
-type Request struct {
+type ClientRequest struct{
 	Name string `json:"name"`
-	Addr string `json:"addr"`
+	Port uint `json:"port"`
 }
 
-func register(r Request) (resBody []byte, err error) {
+type request struct {
+	name string
+	addr string
+}
+
+func register(r request) (resBody []byte, err error) {
 	regLock.Lock()
 
 	for k, v := range _localServices {
-		if r.Addr == v {
+		if r.addr == v {
 			err = fmt.Errorf("Address %s in use by %s", v, k)
 			regLock.Unlock()
 			return
 		}
 	}
 
-	_localServices[r.Name] = r.Addr
+	_localServices[r.name] = r.addr
 	regLock.Unlock()
 
 	b := Block{
-		Services: []string{r.Name},
+		Services: []string{r.name},
 	}
 
 	signBlock(&b)
@@ -109,7 +117,7 @@ func register(r Request) (resBody []byte, err error) {
 		err = fmt.Errorf("%d response: %s", res.StatusCode, string(resBody))
 
 		regLock.Lock()
-		delete(_localServices, r.Name)
+		delete(_localServices, r.name)
 		regLock.Unlock()
 	}
 

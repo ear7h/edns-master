@@ -2,3 +2,4 @@
 *dump.rdb
 master/master
 slave/slave
+client/edns/edns

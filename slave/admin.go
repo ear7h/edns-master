@@ -33,7 +33,7 @@ func makeAdminHandler() http.HandlerFunc {
 			}
 			r.Body.Close()
 
-			localRequest := Request{}
+			localRequest := ClientRequest{}
 
 			err = json.Unmarshal(byt, &localRequest)
 			if err != nil {
@@ -41,7 +41,17 @@ func makeAdminHandler() http.HandlerFunc {
 				return
 			}
 
-			res, err := register(localRequest)
+			if localRequest.Port == 0 {
+				http.Error(w, "port must be > 0", http.StatusBadRequest)
+			}
+
+			localAddr := fmt.Sprintf("127.0.0.1:%d", localRequest.Port)
+
+			res, err := register(request{
+				name: localRequest.Name,
+				addr: localAddr,
+			})
+
 			if err != nil {
 				w.WriteHeader(http.StatusServiceUnavailable)
 				fmt.Fprintf(w, "error registering service %s\n%s", localRequest.Name, err.Error())
