@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  server:
+    build: .
+    container_name: edns-slave
+    hostname: home-container
+    environment:
+      EAR7H_ENV: "prod"
+    volumes:
+      - "/private/var/ear7h/edns/certs:/var/ear7h/edns/certs"
+    ports:
+      - "443:443"
+      - "80:80"

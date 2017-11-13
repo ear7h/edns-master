@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/ear7h/edns/client"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -19,8 +18,8 @@ import (
 const (
 	_masterAdminPort = ":4454"
 	_slaveAdminPort  = ":4455"
-	_proxyPort       = ":4443"
-	_timeout         = 120 // timeout in seconds
+	_proxyPort       = ":443"
+	_timeout         = (120 / 9) * 10  // timeout in seconds
 )
 
 var _hostname string
@@ -38,9 +37,12 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	_hostname = strings.ToLower(_hostname)
 
 	_masterHost = "ear7h.net"
 	_password = "asd"
+
+	_localServices[_hostname+"."+_masterHost] = "127.0.0.1"+_slaveAdminPort
 }
 
 type Block struct {
@@ -64,7 +66,14 @@ func signBlock(b *Block) {
 	b.Signature = base64.StdEncoding.EncodeToString(sum[:])
 }
 
-func register(r client.Request) (resBody []byte, err error) {
+
+// copied from the client package
+type Request struct {
+	Name string `json:"name"`
+	Addr string `json:"addr"`
+}
+
+func register(r Request) (resBody []byte, err error) {
 	regLock.Lock()
 
 	for k, v := range _localServices {
@@ -113,6 +122,10 @@ func clean() {
 	defer regLock.Unlock()
 
 	for k, v := range _localServices {
+		if k == _hostname {
+			continue
+		}
+
 		conn, err := net.Dial("tcp", v)
 		if err != nil {
 			delete(_localServices, k)
@@ -124,12 +137,15 @@ func clean() {
 
 func post() {
 	regLock.Lock()
-	services := make([]string, len(_localServices))
-	i := 0
+	services := []string{}
+
 	for k := range _localServices {
-		services[i] = k
-		i++
+		if k == _hostname {
+			continue
+		}
+		services = append(services, k)
 	}
+
 	regLock.Unlock()
 
 	b := Block{
@@ -167,10 +183,14 @@ func main() {
 	}()
 
 	go func() {
-	panic(serveProxy())
+		panic(serveRedirect())
 	}()
 
-	<- make(chan bool, 1)
+	go func() {
+		panic(serveProxy())
+	}()
+
+	<- make(chan struct{}, 1)
 
 
 }

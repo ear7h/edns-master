@@ -16,7 +16,7 @@ import (
 const (
 	_dnsPort         = ":4453"
 	_masterAdminPort = ":4454"
-	_slavePort       = ":4443" // the slave proxy server
+	_slavePort       = ":443" // the slave proxy server
 	_timeout         = 120     // timeout in seconds
 )
 
@@ -76,6 +76,9 @@ func in(x string, arr *[]string) (b bool) {
 
 // alphanumeric plus dash
 func validHostName(name string) bool {
+	if name == "" {
+		return false
+	}
 	for _, v := range name {
 		if (v < 'a' || v > 'z') &&
 			(v < 'A' || v > 'Z') &&
@@ -283,7 +286,7 @@ func main() {
 	go func() {
 		for {
 			clean()
-			time.Sleep((_timeout * 9 / 10) * time.Second)
+			time.Sleep(_timeout * time.Second)
 		}
 	}()
 

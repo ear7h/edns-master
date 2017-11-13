@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ear7h/edns/client"
 	"io/ioutil"
 	"net/http"
 )
@@ -15,6 +14,16 @@ func serveAdmin() error {
 func makeAdminHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
+		case http.MethodGet:
+			arr := make([]string, len(_localServices))
+			i := 0
+			for k := range _localServices {
+				arr[i] = k
+				i++
+			}
+			byt, _ := json.Marshal(arr)
+			w.Write(byt)
+
 		case http.MethodPost:
 
 			byt, err := ioutil.ReadAll(r.Body)
@@ -24,7 +33,7 @@ func makeAdminHandler() http.HandlerFunc {
 			}
 			r.Body.Close()
 
-			localRequest := client.Request{}
+			localRequest := Request{}
 
 			err = json.Unmarshal(byt, &localRequest)
 			if err != nil {
