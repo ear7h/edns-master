@@ -109,7 +109,6 @@ func addBlock(b Block) (ret []string) {
 
 	hostname := strings.ToLower(b.Hostname)
 
-
 	// keep track of a records
 	err := _store.SAdd("_hosts", hostname+"."+_domainDot).Err()
 	if err != nil {
@@ -219,6 +218,9 @@ aRecord:
 func clean() {
 	_changes++
 	_store.SAdd("_hosts", _domainDot)
+	_store.SAdd("_hosts", "ns1."+_domainDot, _masterIP)
+	_store.SAdd("_hosts", "ns2."+_domainDot, _masterIP)
+
 	arr, err := _store.SMembers("_hosts").Result()
 	// should not be redis.Nil
 	if err != nil {
@@ -260,7 +262,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	hang := make(chan bool, 1)
 	go func() {
 		panic(serveAdmin())
 	}()
@@ -276,5 +277,12 @@ func main() {
 		}
 	}()
 
-	panic(<-hang)
+	go func() {
+		for {
+			time.Sleep(24 * time.Hour)
+			_changes = 0
+		}
+	}()
+
+	<-make(chan struct{}, 1)
 }
