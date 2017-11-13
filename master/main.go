@@ -133,6 +133,7 @@ func addBlock(b Block) (ret []string) {
 	err = _store.Set(hostname+"."+_domainDot, b.ip, _timeout*time.Second).Err()
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	ret = []string{hostname + "." + _domainDot}
 
