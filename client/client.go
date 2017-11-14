@@ -1,5 +1,5 @@
 /*
-this package controls the slave via local http calls
+this package controls a child via local http calls
  */
 package client
 

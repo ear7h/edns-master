@@ -8,7 +8,7 @@ import (
 )
 
 func serveAdmin() error {
-	return http.ListenAndServe(_slaveAdminPort, makeAdminHandler())
+	return http.ListenAndServe(_childAdminPort, makeAdminHandler())
 }
 
 func makeAdminHandler() http.HandlerFunc {

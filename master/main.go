@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/miekg/dns"
+	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -14,49 +15,71 @@ import (
 
 // underscore means global
 const (
-	_dnsPort         = ":4453"
-	_masterAdminPort = ":4454"
-	_slavePort       = ":443" // the slave proxy server
+	_passwordFile    = "/var/ear7h/edns/password.txt"
+	_dnsPort         = ":4453" // docker should bind 53 to this port
+	_masterAdminPort = ":4454" // http server for administration of dns
+	_childProxyPort  = ":443"  // children's proxy port
 	_timeout         = 120     // timeout in seconds
 )
 
+// password for authenticating the incoming blocks
 var _password string
 var _domain = "ear7h.net"
+
+// dns require a trailing period
 var _domainDot = "ear7h.net."
+
+// additions or cleans which happened today
 var _changes int
+
+// ip address of this node, should be set as EAR7H_ROOT env
 var _masterIP string
+
+// client for the redis backend
 var _store *redis.Client
+
+// this is a map of names which will never get erased
 var _hostWhitelist map[string]bool
 
 func init() {
-	_password = "asd"
+	// read the pasword from a file
+	byt, err := ioutil.ReadFile(_passwordFile)
+	if err != nil {
+		panic(err)
+	}
+	_password = string(byt)
 
+	// get the ip address from an environment variable
 	_masterIP = os.Getenv("EAR7H_ROOT")
 
+	// redis address
 	var redisAddr = "localhost:6379"
 	if os.Getenv("EAR7H_ENV") == "prod" {
+		// docker
 		redisAddr = "redis:6379"
 	}
 
+	// make the redis client and ping
 	_store = redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
 		Password: "",
 		DB:       0,
 	})
-
 	pong, err := _store.Ping().Result()
 	if pong != "PONG" || err != nil {
 		fmt.Println(pong, err)
 	}
 
+	// add the root doamin and name servers to the whitelist
 	_hostWhitelist = map[string]bool{
-		_domainDot: true,
-		"ns1."+_domainDot : true,
-		"ns2."+_domainDot : true,
+		_domainDot:          true,
+		"ns1." + _domainDot: true,
+		"ns2." + _domainDot: true,
 	}
 
 }
 
+// Block is the standard communication structure between master and child nodes
 type Block struct {
 	Hostname  string    `json:"hostname"`
 	Signature string    `json:"signature"`
@@ -65,6 +88,7 @@ type Block struct {
 	ip        string    // filled in by admin server
 }
 
+// array utility function, returns true if x is an element of arr
 func in(x string, arr *[]string) (b bool) {
 	for _, v := range *arr {
 		if v == x {
@@ -91,6 +115,7 @@ func validHostName(name string) bool {
 	return true
 }
 
+// verifies the block was signed with the correct password
 func verifyBlock(b Block) (ok bool) {
 	if b.Hostname == "" {
 		fmt.Println("verification failed, no hostname")
@@ -109,6 +134,7 @@ func verifyBlock(b Block) (ok bool) {
 }
 
 // adds a request Block to the redis store
+// fails silently
 func addBlock(b Block) (ret []string) {
 	_changes++
 	if ok := verifyBlock(b); !ok {
@@ -162,6 +188,9 @@ func addBlock(b Block) (ret []string) {
 
 }
 
+// given the name of a CNAME or A/AAAA record, return
+// the matching resource records
+// in the case of cname records, the pointed A/AAAA are returned also
 func query(name string) (rr []dns.RR) {
 	name = strings.ToLower(name)
 
@@ -172,6 +201,7 @@ func query(name string) (rr []dns.RR) {
 	}
 
 aRecord:
+
 	if in(name, &arr) {
 		ip, err := _store.Get(name).Result()
 		if err != nil {
@@ -230,9 +260,12 @@ aRecord:
 
 }
 
+// cleans the redis server
 func clean() {
 	_changes++
 
+	// whitelisted hosts are all served by this program
+	// therefore they can be A records (ip string value in redis)
 	for k := range _hostWhitelist {
 		err := _store.SAdd("_hosts", k).Err()
 		err = _store.Set(k, _masterIP, _timeout*time.Second).Err()
@@ -241,30 +274,29 @@ func clean() {
 		}
 	}
 
-	arr, err := _store.SMembers("_hosts").Result()
+	// get a list of a records
+	hosts, err := _store.SMembers("_hosts").Result()
 	// should not be redis.Nil
 	if err != nil {
 		panic(err)
 	}
 
-	for _, v := range arr {
-		if _hostWhitelist[v] {
+	// only the _hosts set needs to be updated
+	// as the regular keys expire
+	for _, host := range hosts {
+		// skip the whitelist
+		if _hostWhitelist[host] {
 			continue
 		}
 
-		ip, err := _store.Get(v).Result()
-		if err != nil {
-			continue
+		// if the host doesn't exist, it timed out
+		// and so have the CNAMEs pointing to it
+		err := _store.Get(host).Err()
+		if err == redis.Nil {
+			fmt.Println("cleaning: ", host)
+			_store.SRem(host)
 		}
 
-		c, err := net.DialTimeout("tcp", ip+_slavePort, 5 * time.Second)
-		if err != nil {
-			fmt.Println("cleaning: ", v)
-			_store.SRem(v)
-			_store.Expire(v, 0)
-			continue
-		}
-		c.Close()
 	}
 }
 
@@ -292,7 +324,16 @@ func main() {
 
 	go func() {
 		for {
-			time.Sleep(24 * time.Hour)
+			// sleep until tomorrow, reset the changes
+			// and do it all again
+			time.Sleep(
+				time.Until(
+					time.Now().
+						Add(24 * time.Hour).
+						Truncate(24 * time.Hour),
+				),
+			)
+
 			_changes = 0
 		}
 	}()

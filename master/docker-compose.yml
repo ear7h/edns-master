@@ -13,6 +13,8 @@ services:
     environment:
       EAR7H_ENV: "prod"
       EAR7H_ROOT: "104.131.130.194"
+    volumes:
+      - "/var/ear7h/edns/:/var/ear7h/edns/"
     ports:
       - "53:4453"
       - "53:4453/udp"

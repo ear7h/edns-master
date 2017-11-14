@@ -16,8 +16,9 @@ import (
 )
 
 const (
+	_passwordFile    = "/var/ear7h/edns/password.txt"
 	_masterAdminPort = ":4454"
-	_slaveAdminPort  = ":4455"
+	_childAdminPort  = ":4455"
 	_proxyPort       = ":443"
 	_timeout         = (120 / 9) * 10  // timeout in seconds
 )
@@ -29,27 +30,32 @@ var _portMin = 8080
 var _portMax = 8090 // exclusive
 // subdomain : ip
 var _localServices = map[string]string{}
-var _availablePorts = map[int]bool{}
 var regLock sync.Mutex
 
 func init() {
-	var err error
+	// set the password
+	byt, err := ioutil.ReadFile(_passwordFile)
+	if err != nil {
+		panic(err)
+	}
+	_password = string(byt)
+
+	// set the hostname
 	_hostname, err = os.Hostname()
 	if err != nil {
 		panic(err)
 	}
 	_hostname = strings.ToLower(_hostname)
 
+	// the domain being served
 	_masterHost = "ear7h.net"
-	_password = "asd"
 
-	_localServices[_hostname+"."+_masterHost] = "127.0.0.1"+_slaveAdminPort
-
-	for i := _portMin; i < _portMax; i ++ {
-		_availablePorts[i] = true
-	}
+	// add the admin server as service for the node
+	_localServices[_hostname+"."+_masterHost] = "127.0.0.1"+ _childAdminPort
 }
 
+// Block is the standard messaging format between child nodes
+// and the master node
 type Block struct {
 	Hostname  string    `json:"hostname"`
 	Signature string    `json:"signature"`
@@ -199,6 +205,4 @@ func main() {
 	}()
 
 	<- make(chan struct{}, 1)
-
-
 }

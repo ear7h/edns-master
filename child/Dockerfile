@@ -8,7 +8,7 @@ RUN apk update && apk upgrade && \
 WORKDIR /go/src/github.com/ear7h/edns/slave
 COPY . .
 
-RUN go get ./...
+RUN go get -v ./...
 RUN go build
 
 CMD ["./slave"]

@@ -1,5 +1,7 @@
 .idea
 *dump.rdb
+
+*build.out
 master/master
-slave/slave
+child/child
 client/edns/edns
